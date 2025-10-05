@@ -1,6 +1,9 @@
 import React, { useState } from "react";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
 import { app } from "../lib/firebaseConfig";
+import { useLocation } from "wouter";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 const auth = getAuth(app);
 
@@ -9,6 +12,7 @@ const AuthForm: React.FC = () => {
   const [password, setPassword] = useState("");
   const [isLogin, setIsLogin] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [, setLocation] = useLocation();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -16,10 +20,10 @@ const AuthForm: React.FC = () => {
     try {
       if (isLogin) {
         await signInWithEmailAndPassword(auth, email, password);
-        alert("Logged in successfully!");
+        setLocation("/"); // Redirect to index after login
       } else {
         await createUserWithEmailAndPassword(auth, email, password);
-        alert("Registered successfully!");
+        setLocation("/"); // Redirect to index after register
       }
     } catch (err: any) {
       setError(err.message);
@@ -27,36 +31,44 @@ const AuthForm: React.FC = () => {
   };
 
   return (
-    <div className="max-w-sm mx-auto mt-10 p-4 border rounded shadow">
-      <h2 className="text-xl font-bold mb-4">{isLogin ? "Login" : "Register"}</h2>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          required
-          className="border p-2 rounded"
-        />
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          required
-          className="border p-2 rounded"
-        />
-        {error && <div className="text-red-500">{error}</div>}
-        <button type="submit" className="bg-blue-500 text-white p-2 rounded">
-          {isLogin ? "Login" : "Register"}
-        </button>
-      </form>
-      <button
-        className="mt-2 text-blue-500 underline"
-        onClick={() => setIsLogin(!isLogin)}
-      >
-        {isLogin ? "Need an account? Register" : "Already have an account? Login"}
-      </button>
+    <div className="flex justify-center items-center min-h-[60vh]">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle>{isLogin ? "Login" : "Register"}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={e => setEmail(e.target.value)}
+              required
+              className="border p-2 rounded"
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+              className="border p-2 rounded"
+            />
+            {error && <div className="text-red-500 text-sm">{error}</div>}
+            <Button type="submit" className="w-full">
+              {isLogin ? "Login" : "Register"}
+            </Button>
+          </form>
+          <Button
+            variant="ghost"
+            className="w-full mt-2 text-blue-500"
+            onClick={() => setIsLogin(!isLogin)}
+            type="button"
+          >
+            {isLogin ? "Need an account? Register" : "Already have an account? Login"}
+          </Button>
+        </CardContent>
+      </Card>
     </div>
   );
 };
