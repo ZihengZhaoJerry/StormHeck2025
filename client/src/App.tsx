@@ -9,6 +9,7 @@ import UserRequestPage from "@/pages/UserRequestPage";
 import PerformerDashboard from "@/pages/PerformerDashboard";
 import LoginPage from "@/pages/LoginPage";
 import RequestSongPage from "@/pages/RequestSongPage";
+import QRCodePage from "@/pages/QRCodePage";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function Router() {
@@ -34,6 +35,9 @@ function Router() {
       )} />
       <Route path="/request-song" component={() => (
         <RequestSongPage />
+      )} />
+      <Route path="/qr-code" component={() => (
+        <QRCodePage />
       )} />
       <Route component={NotFound} />
     </Switch>

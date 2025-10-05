@@ -37,7 +37,6 @@ export default function QRCodeDisplay({ url, size = 200, position = "corner" }: 
           includeMargin={false}
           className="mx-auto"
         />
-        <p className="text-muted-foreground">Scan with your phone to browse and request songs</p>
       </div>
     </Card>
   );

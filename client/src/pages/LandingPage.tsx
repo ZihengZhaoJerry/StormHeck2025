@@ -31,9 +31,9 @@ export default function LandingPage() {
                 Performer Dashboard
               </Button>
             </Link>
-            <Link href="/request">
-              <Button size="lg" variant="outline" className="text-lg h-14 px-8" data-testid="button-request">
-                Request a Song
+            <Link href="/qr-code">
+              <Button size="lg" variant="outline" className="text-lg h-14 px-8" data-testid="button-qr-code">
+                Show QR Code
               </Button>
             </Link>
           </div>
