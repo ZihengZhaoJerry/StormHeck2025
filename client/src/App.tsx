@@ -8,6 +8,7 @@ import LandingPage from "@/pages/LandingPage";
 import UserRequestPage from "@/pages/UserRequestPage";
 import PerformerDashboard from "@/pages/PerformerDashboard";
 import LoginPage from "@/pages/LoginPage";
+import RequestSongPage from "@/pages/RequestSongPage";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 function Router() {
@@ -30,6 +31,9 @@ function Router() {
         <ProtectedRoute>
           <PerformerDashboard />
         </ProtectedRoute>
+      )} />
+      <Route path="/request-song" component={() => (
+        <RequestSongPage />
       )} />
       <Route component={NotFound} />
     </Switch>
