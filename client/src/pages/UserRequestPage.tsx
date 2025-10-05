@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useMemo, useRef, useState } from "react";
 import SearchBar from "@/components/SearchBar";
 import SongCard from "@/components/SongCard";
@@ -8,11 +7,6 @@ import { Music, Search as SearchIcon, ListMusic } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { searchSpotify } from "../lib/spotifyHelper";
-
-// Keeping your current import name/path:
-// import { searchSpotify } from "../lib/spotifyHelper";
-
-// ---------- Helpers (add these) ----------
 
 // Choose a good-sized album image from Spotify's images array
 function pickImage(
@@ -52,6 +46,7 @@ type UISong = {
 // ---------- Page ----------
 
 export default function UserRequestPage() {
+  const saved = sessionStorage.getItem("qrSession");
   const [searchQuery, setSearchQuery] = useState("");
   const [results, setResults] = useState<UISong[]>([]);
   const [requestedSongs, setRequestedSongs] = useState<string[]>([]);
@@ -75,8 +70,8 @@ export default function UserRequestPage() {
     setLoading(true);
     timerRef.current = setTimeout(async () => {
       try {
-        const data = await searchSpotify(searchQuery, "track"); // your existing helper
-        const mapped = mapSpotifyTracksToCards(data);           // <-- use the mapper
+        const data = await searchSpotify(searchQuery, "track"); 
+        const mapped = mapSpotifyTracksToCards(data);
         setResults(mapped);
       } catch (err: any) {
         toast({

@@ -7,6 +7,7 @@ export default function QRCodePage()
 {
   const sessionKey = useMemo(() => {
   const saved = sessionStorage.getItem("qrSession");
+  
   if (saved) return saved;
   const bytes = crypto.getRandomValues(new Uint8Array(16));
   const binary = Array.from(bytes).map(b => String.fromCharCode(b)).join("");

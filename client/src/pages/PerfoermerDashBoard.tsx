@@ -32,7 +32,7 @@ function mapSpotifyTracksToQueue(data: any): UISong[] {
     artist: (t.artists ?? []).map((a: any) => a.name).join(", "),
     album: t.album?.name ?? "",
     albumArt: pickImage(t.album?.images ?? []),
-    requestedBy: "", // You can fill this if you have user info
+    requestedBy: "", 
     previewUrl: t.preview_url, // <-- add this line
   }));
 }
@@ -45,12 +45,6 @@ type UISong = {
   albumArt?: string;
   requestedBy?: string;
   previewUrl?: string; // <-- add this line
-};
-
-const mockNowPlaying = {
-  title: "Bohemian Rhapsody",
-  artist: "Queen",
-  album: "A Night at the Opera",
 };
 
 export default function LandingPage() {
