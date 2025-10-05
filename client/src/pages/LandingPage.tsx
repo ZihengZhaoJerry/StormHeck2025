@@ -179,41 +179,49 @@ export default function LandingPage() {
       });
       return;
     }
-    // If Spotify is connected, try to enqueue on Spotify first
-    if (spotifyStatus?.connected && song.uri) {
-      (async () => {
-        try {
-          const body: any = { uri: song.uri };
-          if (appUserId) body.userId = appUserId;
-          const resp = await fetch(`/api/spotify/enqueue`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body),
-          });
-          if (resp.ok) {
-            setQueue((prev) => [...prev, song]);
-            toast({ title: "Added to Spotify queue", description: `"${song.title}" was added to Spotify.` });
-          } else {
+    // Always check server-side Spotify connection for the signed-in user before enqueueing
+    (async () => {
+      try {
+        const q = appUserId ? `?userId=${encodeURIComponent(appUserId)}` : "";
+        const statusResp = await fetch(`/api/spotify/status${q}`);
+        const statusJson = statusResp.ok ? await statusResp.json().catch(() => ({})) : { connected: false };
+        const connected = Boolean(statusJson?.connected);
+        setSpotifyStatus({ connected, display_name: statusJson?.display_name });
+
+        if (connected && song.uri) {
+          try {
+            const body: any = { uri: song.uri };
+            if (appUserId) body.userId = appUserId;
+            const resp = await fetch(`/api/spotify/enqueue`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(body),
+            });
+            if (resp.ok) {
+              setQueue((prev) => [...prev, song]);
+              toast({ title: "Added to Spotify queue", description: `"${song.title}" was added to Spotify.` });
+              return;
+            }
             const j = await resp.json().catch(() => ({}));
-            // fallback to local queue if enqueue failed
+            // fallback to local queue
             setQueue((prev) => [...prev, song]);
             toast({ title: "Added to queue (local)", description: j?.error ?? `Could not add to Spotify: ${resp.status}` });
+            return;
+          } catch (e: any) {
+            setQueue((prev) => [...prev, song]);
+            toast({ title: "Added to queue (local)", description: e?.message ?? String(e) });
+            return;
           }
-        } catch (e: any) {
-          // network or other error -> fallback local
-          setQueue((prev) => [...prev, song]);
-          toast({ title: "Added to queue (local)", description: e?.message ?? String(e) });
         }
-      })();
-      return;
-    }
+      } catch (err) {
+        // ignore and fallback to local queue
+      }
 
-    // Default: add to local queue
-    setQueue((prev) => [...prev, song]);
-    toast({
-      title: "Added to queue",
-      description: `"${song.title}" has been added to the queue.`,
-    });
+      // Default: add to local queue
+      setQueue((prev) => [...prev, song]);
+      toast({ title: "Added to queue", description: `"${song.title}" has been added to the queue.` });
+    })();
+    return;
   };
 
   // Set now playing from queue
