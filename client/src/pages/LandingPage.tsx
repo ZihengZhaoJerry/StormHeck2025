@@ -33,6 +33,7 @@ function mapSpotifyTracksToQueue(data: any): UISong[] {
     album: t.album?.name ?? "",
     albumArt: pickImage(t.album?.images ?? []),
     requestedBy: "", // You can fill this if you have user info
+    previewUrl: t.preview_url, // <-- add this line
   }));
 }
 
@@ -43,6 +44,7 @@ type UISong = {
   album: string;
   albumArt?: string;
   requestedBy?: string;
+  previewUrl?: string; // <-- add this line
 };
 
 const mockNowPlaying = {
@@ -263,6 +265,7 @@ export default function LandingPage() {
                   artist={nowPlaying.artist}
                   album={nowPlaying.album}
                   albumArt={nowPlaying.albumArt}
+                  previewUrl={nowPlaying.previewUrl} // <-- pass previewUrl
                 />
               ) : (
                 <EmptyState
