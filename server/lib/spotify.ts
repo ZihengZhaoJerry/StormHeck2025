@@ -308,6 +308,60 @@ router.post("/play", async (req: Request, res: Response) => {
   }
 });
 
+// Enqueue a track on the user's active Spotify device
+router.post("/enqueue", async (req: Request, res: Response) => {
+  try {
+    const { id, uri, userId, device_id } = req.body as { id?: string; uri?: string; userId?: string; device_id?: string };
+
+    let tokenObj: { access_token: string; refresh_token: string; expires_at: number } | null = null;
+    if (userId) {
+      const ut = userTokens.get(userId);
+      if (!ut) return res.status(401).json({ error: `Spotify not connected for userId ${userId}` });
+      tokenObj = ut;
+    } else if (performerTokens) {
+      tokenObj = performerTokens;
+    } else {
+      return res.status(401).json({ error: "No Spotify connection found. Connect via /api/spotify/login" });
+    }
+
+    try {
+      await refreshTokenIfNeededForTokenObj(tokenObj);
+    } catch (err: any) {
+      console.error("Token refresh failed before enqueue:", err?.message ?? err);
+      if (err?.invalidGrant) {
+        if (userId) userTokens.delete(userId);
+        else performerTokens = null;
+        return res.status(401).json({ error: "Spotify session expired or revoked. Please reconnect." });
+      }
+      return res.status(500).json({ error: err?.message ?? String(err) });
+    }
+
+    const targetUri = uri ?? (id ? `spotify:track:${id}` : undefined);
+    if (!targetUri) return res.status(400).json({ error: "Missing id or uri in body" });
+
+    const q = `uri=${encodeURIComponent(targetUri)}` + (device_id ? `&device_id=${encodeURIComponent(device_id)}` : "");
+    const resp = await fetch(`${SPOTIFY_BASE_URL}/me/player/queue?${q}`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${tokenObj.access_token}` },
+    });
+
+    if (resp.status === 204) return res.status(200).json({ ok: true });
+    const json = await resp.json().catch(() => ({}));
+    if (resp.status === 404) {
+      return res.status(404).json({ error: "No active Spotify device found. Start Spotify on a device (phone/desktop) and try again." });
+    }
+    if (!resp.ok) {
+      console.error("Enqueue failed:", resp.status, json);
+      return res.status(500).json({ error: json || `Enqueue failed: ${resp.status}` });
+    }
+
+    res.status(200).json({ ok: true, data: json });
+  } catch (err: any) {
+    console.error("/enqueue error:", err?.message ?? err);
+    res.status(500).json({ error: err?.message ?? String(err) });
+  }
+});
+
 // Return connection status for the performer (demo)
 router.get("/status", async (req: Request, res: Response) => {
   const { userId } = req.query as { userId?: string };
