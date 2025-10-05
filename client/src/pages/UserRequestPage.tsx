@@ -4,12 +4,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import SearchBar from "@/components/SearchBar";
 import SongCard from "@/components/SongCard";
 import EmptyState from "@/components/EmptyState";
-import { Music, Search as SearchIcon } from "lucide-react";
+import { Music, Search as SearchIcon, ListMusic } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { searchSpotify } from "../lib/spotifyHelper";
 
 // Keeping your current import name/path:
-import { searchSpotify } from "../lib/spotifyHelper";
+// import { searchSpotify } from "../lib/spotifyHelper";
 
 // ---------- Helpers (add these) ----------
 
@@ -56,6 +57,7 @@ export default function UserRequestPage() {
   const [requestedSongs, setRequestedSongs] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
+  const [submitting, setSubmitting] = useState(false);
 
   // simple debounce to avoid spamming your API
   const debounceMs = 350;
@@ -140,46 +142,119 @@ export default function UserRequestPage() {
     }
   };
 
+  // Helper to get full song info for requested songs
+  const requestedSongObjs = useMemo(
+    () => results.filter((s) => requestedSongs.includes(s.id)),
+    [results, requestedSongs]
+  );
+
+  // Submit handler
+  const submitRequests = async () => {
+    if (requestedSongs.length === 0) return;
+    setSubmitting(true);
+    try {
+      // Send only the song IDs, or send full song info as needed by your backend
+      const res = await fetch("/api/queue", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ songs: requestedSongObjs }),
+      });
+      if (!res.ok) throw new Error("Failed to submit requests");
+      setRequestedSongs([]);
+      toast({
+        title: "Requests submitted!",
+        description: "Your song requests have been added to the queue.",
+        variant: "default",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Submission failed",
+        description: err?.message ?? "Could not submit your requests.",
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <div className="flex items-center justify-between p-4 border-b">
         <h1 className="text-2xl font-bold">Request a Song</h1>
         {/* <ThemeToggle /> */}
       </div>
-
-      {/* Controlled search bar */}
-      <SearchBar value={searchQuery} onChange={setSearchQuery} />
-
-      <div className="max-w-2xl mx-auto p-4 pb-24">
-        {emptyState ? (
-          emptyState
-        ) : (
-          <div className="space-y-3">
-            {results.map((song) => (
-              <SongCard
-                key={song.id}
-                id={song.id}
-                title={song.title}
-                artist={song.artist}
-                album={song.album}
-                albumArt={song.albumArt}   // <-- shows the album cover
-                isRequested={requestedSongs.includes(song.id)}
-                onClick={() => handleSongRequest(song.id, song.title)}
-              />
-            ))}
+      <div className="flex flex-1 min-h-0">
+        {/* Left: Search & Results */}
+        <div className="flex-1 border-r max-w-2xl flex flex-col">
+          <div className="p-4">
+            <SearchBar value={searchQuery} onChange={setSearchQuery} />
           </div>
-        )}
-      </div>
-
-      {requestedSongs.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur-xl border-t">
-          <div className="max-w-2xl mx-auto">
-            <Button className="w-full h-14 text-lg" data-testid="button-view-requests">
-              View Your Requests ({requestedSongs.length})
+          <div className="flex-1 overflow-y-auto p-4 pb-24">
+            {emptyState ? (
+              emptyState
+            ) : (
+              <div className="space-y-3">
+                {results.map((song) => (
+                  <SongCard
+                    key={song.id}
+                    id={song.id}
+                    title={song.title}
+                    artist={song.artist}
+                    album={song.album}
+                    albumArt={song.albumArt}   // <-- shows the album cover
+                    isRequested={requestedSongs.includes(song.id)}
+                    onClick={() => handleSongRequest(song.id, song.title)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+        {/* Right: Queue Panel */}
+        <div className="w-full max-w-md flex flex-col bg-muted/40">
+          <div className="p-4 border-b flex items-center gap-2">
+            <ListMusic className="w-5 h-5" />
+            <span className="font-semibold text-lg">Your Queue</span>
+            <span className="ml-auto text-sm text-muted-foreground">
+              {requestedSongs.length} selected
+            </span>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4">
+            {requestedSongs.length === 0 ? (
+              <EmptyState
+                icon={ListMusic}
+                title="No songs in queue"
+                description="Your selected songs will appear here"
+              />
+            ) : (
+              <div className="space-y-3">
+                {requestedSongObjs.map((song) => (
+                  <SongCard
+                    key={song.id}
+                    id={song.id}
+                    title={song.title}
+                    artist={song.artist}
+                    album={song.album}
+                    albumArt={song.albumArt}
+                    isRequested={true}
+                    onClick={() => handleSongRequest(song.id, song.title)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+          <div className="p-4 border-t">
+            <Button
+              className="w-full h-12 text-lg"
+              data-testid="button-submit-requests"
+              disabled={requestedSongs.length === 0 || submitting}
+              onClick={submitRequests}
+            >
+              {submitting ? "Submitting..." : `Submit Requests (${requestedSongs.length})`}
             </Button>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 }
