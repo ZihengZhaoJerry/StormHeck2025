@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useLocation } from "wouter";
 import SearchBar from "@/components/SearchBar";
 import SongCard from "@/components/SongCard";
 import EmptyState from "@/components/EmptyState";
@@ -58,6 +59,10 @@ export default function UserRequestPage() {
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
   const [submitting, setSubmitting] = useState(false);
+  const [location] = useLocation();
+  const params = new URLSearchParams(location.split("?")[1]);
+  const eventId = params.get("eventId");
+  const session = params.get("session");
 
   // simple debounce to avoid spamming your API
   const debounceMs = 350;
@@ -157,7 +162,7 @@ export default function UserRequestPage() {
       const res = await fetch("/api/queue", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ songs: requestedSongObjs }),
+        body: JSON.stringify({ eventId, session, songs: requestedSongObjs }),
       });
       if (!res.ok) throw new Error("Failed to submit requests");
       setRequestedSongs([]);

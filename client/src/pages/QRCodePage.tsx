@@ -15,8 +15,11 @@ export default function QRCodePage()
   return key;
 }, []);
 
+  // Example: Replace with dynamic eventId if needed
+  const eventId = "stormheck2025"; 
+
   const [, setLocation] = useLocation();
-  const REQUEST_URL = `${window.location.origin}/request?session=${sessionKey}`;
+  const REQUEST_URL = `${window.location.origin}/request?eventId=${eventId}&session=${sessionKey}`;
 
   return (
     <a onClick={() => setLocation("/")} style = {{ cursor: 'default' }}>
