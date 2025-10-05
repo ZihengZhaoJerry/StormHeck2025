@@ -4,7 +4,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
-import LandingPage from "@/pages/PerfoermerDashBoard";
+import LandingPage from "@/pages/PerformerDashboard.tsx";
 import UserRequestPage from "@/pages/UserRequestPage";
 import LoginPage from "@/pages/LoginPage";
 import QRCodePage from "@/pages/QRCodePage";
@@ -23,11 +23,6 @@ function Router() {
       )} />
       <Route path="/request" component={() => (
         <UserRequestPage />
-      )} />
-      <Route path="/performer" component={() => (
-        <ProtectedRoute>
-          <PerformerDashboard />
-        </ProtectedRoute>
       )} />
       <Route path="/qr-code" component={() => (
         <QRCodePage />
