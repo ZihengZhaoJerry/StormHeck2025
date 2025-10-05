@@ -8,14 +8,29 @@ import LandingPage from "@/pages/LandingPage";
 import UserRequestPage from "@/pages/UserRequestPage";
 import PerformerDashboard from "@/pages/PerformerDashboard";
 import LoginPage from "@/pages/LoginPage";
+import ProtectedRoute from "./components/ProtectedRoute";
 
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={LandingPage} />
-      <Route path="/login" component={LoginPage} />
-      <Route path="/request" component={UserRequestPage} />
-      <Route path="/performer" component={PerformerDashboard} />
+      <Route path="/login" component={() => (
+          <LoginPage />
+        )}/>
+      <Route path="/" component={() => (
+        <ProtectedRoute>
+          <LandingPage />
+        </ProtectedRoute>
+      )} />
+      <Route path="/request" component={() => (
+        <ProtectedRoute>
+          <UserRequestPage />
+        </ProtectedRoute>
+      )} />
+      <Route path="/performer" component={() => (
+        <ProtectedRoute>
+          <PerformerDashboard />
+        </ProtectedRoute>
+      )} />
       <Route component={NotFound} />
     </Switch>
   );
