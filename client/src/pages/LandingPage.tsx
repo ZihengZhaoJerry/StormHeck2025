@@ -116,13 +116,16 @@ export default function LandingPage() {
     };
   }, [searchQuery, toast]);
 
-  // fetch spotify connection status for header
+  // subscribe to Firebase auth to get signed-in app user id
   useEffect(() => {
-    // subscribe to Firebase auth and fetch Spotify connection status for this app user if available
     const unsub = onAuthStateChanged(getAuth(firebaseApp), (user) => {
       setAppUserId(user?.uid ?? null);
     });
+    return () => unsub();
+  }, []);
 
+  // fetch spotify connection status for header (re-run when appUserId changes)
+  useEffect(() => {
     (async () => {
       try {
         const q = appUserId ? `?userId=${encodeURIComponent(appUserId)}` : "";
@@ -134,9 +137,7 @@ export default function LandingPage() {
         setSpotifyStatus({ connected: false });
       }
     })();
-
-    return () => unsub();
-  }, []);
+  }, [appUserId]);
 
   const emptyState = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -217,38 +218,32 @@ export default function LandingPage() {
 
   // Set now playing from queue
   const handlePlayFromQueue = (song: UISong) => {
-    // If Spotify is connected, ask server to start playback
+    // Immediately update UI so it doesn't go blank
+    setNowPlaying(song);
+    setActiveTab("now-playing");
+
+    // If Spotify is connected, ask server to start playback (include appUserId when available)
     if (spotifyStatus?.connected && song.uri) {
       (async () => {
         try {
+          const body: any = { uri: song.uri };
+          if (appUserId) body.userId = appUserId;
           const resp = await fetch(`/api/spotify/play`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ uri: song.uri }),
+            body: JSON.stringify(body),
           });
           if (resp.ok) {
-            setNowPlaying(song);
-            setActiveTab("now-playing");
             toast({ title: "Playing on Spotify", description: `"${song.title}" should start playing on the connected Spotify device.` });
           } else {
             const j = await resp.json().catch(() => ({}));
             toast({ title: "Play failed", description: j?.error ?? `Could not play on Spotify: ${resp.status}`, variant: "destructive" });
-            // still set locally so performer can see it
-            setNowPlaying(song);
-            setActiveTab("now-playing");
           }
         } catch (e: any) {
           toast({ title: "Play failed", description: e?.message ?? String(e), variant: "destructive" });
-          setNowPlaying(song);
-          setActiveTab("now-playing");
         }
       })();
-      return;
     }
-
-    // Default local-only play
-    setNowPlaying(song);
-    setActiveTab("now-playing");
   };
 
   return (
@@ -299,7 +294,8 @@ export default function LandingPage() {
                     variant="outline"
                     onClick={() => {
                       // redirect to server login which will forward to Spotify
-                      window.location.href = `/api/spotify/login`;
+                      const url = appUserId ? `/api/spotify/login?userId=${encodeURIComponent(appUserId)}` : `/api/spotify/login`;
+                      window.location.href = url;
                     }}
                   >
                     Connect Spotify
