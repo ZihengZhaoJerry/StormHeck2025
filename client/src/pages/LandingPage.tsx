@@ -181,6 +181,7 @@ export default function LandingPage() {
     }
     // Always check server-side Spotify connection for the signed-in user before enqueueing
     (async () => {
+      let added = false;
       try {
         const q = appUserId ? `?userId=${encodeURIComponent(appUserId)}` : "";
         const statusResp = await fetch(`/api/spotify/status${q}`);
@@ -200,26 +201,23 @@ export default function LandingPage() {
             if (resp.ok) {
               setQueue((prev) => [...prev, song]);
               toast({ title: "Added to Spotify queue", description: `"${song.title}" was added to Spotify.` });
+              added = true;
               return;
             }
             const j = await resp.json().catch(() => ({}));
             // fallback to local queue
-            setQueue((prev) => [...prev, song]);
             toast({ title: "Added to queue (local)", description: j?.error ?? `Could not add to Spotify: ${resp.status}` });
-            return;
           } catch (e: any) {
-            setQueue((prev) => [...prev, song]);
             toast({ title: "Added to queue (local)", description: e?.message ?? String(e) });
-            return;
           }
         }
       } catch (err) {
         // ignore and fallback to local queue
       }
-
-      // Default: add to local queue
-      setQueue((prev) => [...prev, song]);
-      toast({ title: "Added to queue", description: `"${song.title}" has been added to the queue.` });
+      if (!added) {
+        setQueue((prev) => [...prev, song]);
+        toast({ title: "Added to queue", description: `"${song.title}" has been added to the queue.` });
+      }
     })();
     return;
   };
