@@ -22,8 +22,11 @@ function Router() {
         </ProtectedRoute>
       )} />
       <Route path="/request" component={() => (
+        <UserRequestPage />
+      )} />
+      <Route path="/performer" component={() => (
         <ProtectedRoute>
-          <UserRequestPage />
+          <PerformerDashboard />
         </ProtectedRoute>
       )} />
       <Route path="/qr-code" component={() => (

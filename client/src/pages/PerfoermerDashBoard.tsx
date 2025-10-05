@@ -34,6 +34,7 @@ function mapSpotifyTracksToQueue(data: any): UISong[] {
     albumArt: pickImage(t.album?.images ?? []),
     requestedBy: "", 
     previewUrl: t.preview_url, // <-- add this line
+    uri: t.uri, // spotify:track:<id>
   }));
 }
 
@@ -45,6 +46,7 @@ type UISong = {
   albumArt?: string;
   requestedBy?: string;
   previewUrl?: string; // <-- add this line
+  uri?: string;
 };
 
 export default function LandingPage() {
@@ -59,6 +61,20 @@ export default function LandingPage() {
   const debounceMs = 350;
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [nowPlaying, setNowPlaying] = useState<UISong | null>(null);
+  const [spotifyStatus, setSpotifyStatus] = useState<{ connected: boolean; display_name?: string } | null>(null);
+
+  const eventId = "stormheck2025"; // Use the same eventId as in QRCodePage
+
+  useEffect(() => {
+    // Fetch the queue for this event
+    fetch(`/api/song-queue?eventId=${eventId}`)
+      .then(res => res.json())
+      .then(data => {
+        // Ensure data is always an array
+        setQueue(Array.isArray(data) ? data : []);
+      })
+      .catch(() => setQueue([])); // fallback on error
+  }, []);
 
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -90,6 +106,20 @@ export default function LandingPage() {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, [searchQuery, toast]);
+
+  // fetch spotify connection status for header
+  useEffect(() => {
+    (async () => {
+      try {
+        const resp = await fetch(`/api/spotify/status`);
+        if (!resp.ok) return setSpotifyStatus({ connected: false });
+        const json = await resp.json();
+        setSpotifyStatus({ connected: Boolean(json?.connected), display_name: json?.display_name });
+      } catch {
+        setSpotifyStatus({ connected: false });
+      }
+    })();
+  }, []);
 
   const emptyState = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -159,6 +189,46 @@ export default function LandingPage() {
                 </p>
                 <p className="text-sm text-muted-foreground">in queue</p>
               </div>
+
+              {/* Spotify connect / disconnect UI */}
+              <div className="flex items-center gap-2 mr-2">
+                {spotifyStatus?.connected ? (
+                  <>
+                    <div className="text-sm text-muted-foreground">Connected: {spotifyStatus.display_name ?? "Spotify"}</div>
+                    <Button
+                      variant="outline"
+                      size={"sm" as any}
+                      onClick={async () => {
+                        try {
+                          const resp = await fetch(`/api/spotify/disconnect`, { method: "POST" });
+                          if (resp.ok) {
+                            setSpotifyStatus({ connected: false });
+                            toast({ title: "Spotify disconnected" });
+                          } else {
+                            const j = await resp.json().catch(() => ({}));
+                            toast({ title: "Disconnect failed", description: j?.error ?? "Unknown error", variant: "destructive" });
+                          }
+                        } catch (e: any) {
+                          toast({ title: "Disconnect failed", description: e?.message ?? String(e), variant: "destructive" });
+                        }
+                      }}
+                    >
+                      Disconnect
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      // redirect to server login which will forward to Spotify
+                      window.location.href = `/api/spotify/login`;
+                    }}
+                  >
+                    Connect Spotify
+                  </Button>
+                )}
+              </div>
+
             <ThemeToggle />
           </div>
         </div>
@@ -260,6 +330,7 @@ export default function LandingPage() {
                   album={nowPlaying.album}
                   albumArt={nowPlaying.albumArt}
                   previewUrl={nowPlaying.previewUrl} // <-- pass previewUrl
+                  spotifyUri={nowPlaying.uri}
                 />
               ) : (
                 <EmptyState
