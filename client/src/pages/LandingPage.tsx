@@ -66,6 +66,19 @@ export default function LandingPage() {
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [nowPlaying, setNowPlaying] = useState<UISong | null>(null);
 
+  const eventId = "stormheck2025"; // Use the same eventId as in QRCodePage
+
+  useEffect(() => {
+    // Fetch the queue for this event
+    fetch(`/api/song-queue?eventId=${eventId}`)
+      .then(res => res.json())
+      .then(data => {
+        // Ensure data is always an array
+        setQueue(Array.isArray(data) ? data : []);
+      })
+      .catch(() => setQueue([])); // fallback on error
+  }, []);
+
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
 

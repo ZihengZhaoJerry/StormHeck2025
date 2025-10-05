@@ -8,7 +8,6 @@ import LandingPage from "@/pages/LandingPage";
 import UserRequestPage from "@/pages/UserRequestPage";
 import PerformerDashboard from "@/pages/PerformerDashboard";
 import LoginPage from "@/pages/LoginPage";
-import RequestSongPage from "@/pages/RequestSongPage";
 import QRCodePage from "@/pages/QRCodePage";
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -24,17 +23,12 @@ function Router() {
         </ProtectedRoute>
       )} />
       <Route path="/request" component={() => (
-        <ProtectedRoute>
-          <UserRequestPage />
-        </ProtectedRoute>
+        <UserRequestPage />
       )} />
       <Route path="/performer" component={() => (
         <ProtectedRoute>
           <PerformerDashboard />
         </ProtectedRoute>
-      )} />
-      <Route path="/request-song" component={() => (
-        <RequestSongPage />
       )} />
       <Route path="/qr-code" component={() => (
         <QRCodePage />
