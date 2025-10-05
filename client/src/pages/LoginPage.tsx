@@ -4,6 +4,8 @@ import { useLocation } from "wouter";
 import { getAuth, onAuthStateChanged, User } from "firebase/auth";
 import { app } from "@/lib/firebaseConfig";
 import AuthForm from "@/components/AuthForm";  // Your form component
+import { Card } from "@/components/ui/card";
+import { Music, Users, Smartphone } from "lucide-react";
 
 export default function LoginPage() {
   const [, setLocation] = useLocation();
@@ -37,14 +39,45 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Sign in to your account
-          </h2>
+    <div className="min-h-screen flex flex-col bg-background dark:bg-background py-4 px-2">
+      <div className="flex-1 flex flex-col items-center justify-center w-full max-w-4xl mx-auto">
+        <h2 className="mt-4 mb-6 text-center text-4xl font-extrabold text-foreground dark:text-foreground">
+          Live Song Requests Made Simple
+        </h2>
+        <div className="grid md:grid-cols-3 gap-6 mb-14 w-full">
+          <Card className="p-6 text-center">
+            <div className="bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Smartphone className="h-8 w-8 text-primary" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Scan & Request</h3>
+            <p className="text-muted-foreground">
+              Audience members scan a QR code and instantly browse songs to request
+            </p>
+          </Card>
+          <Card className="p-6 text-center">
+            <div className="bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Music className="h-8 w-8 text-primary" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Spotify Integration</h3>
+            <p className="text-muted-foreground">
+              Search millions of songs with album artwork and artist information
+            </p>
+          </Card>
+          <Card className="p-6 text-center">
+            <div className="bg-primary/10 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Users className="h-8 w-8 text-primary" />
+            </div>
+            <h3 className="text-xl font-semibold mb-2">Real-Time Queue</h3>
+            <p className="text-muted-foreground">
+              See requests appear instantly on the performer dashboard
+            </p>
+          </Card>
         </div>
-        <AuthForm />  // Your actual login form here
+        <div className="w-full max-w-lg flex flex-col items-center justify-center">
+          <div className="mb-8 w-full">
+            <AuthForm />
+          </div>
+        </div>
       </div>
     </div>
   );

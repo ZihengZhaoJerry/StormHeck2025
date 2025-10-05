@@ -31,8 +31,8 @@ const AuthForm: React.FC = () => {
   };
 
   return (
-    <div className="flex justify-center items-center min-h-[60vh]">
-      <Card className="w-full max-w-md">
+    <div className="w-full max-w-xl flex flex-col items-center justify-center">
+      <Card className="w-full p-8">
         <CardHeader>
           <CardTitle>{isLogin ? "Login" : "Register"}</CardTitle>
         </CardHeader>
