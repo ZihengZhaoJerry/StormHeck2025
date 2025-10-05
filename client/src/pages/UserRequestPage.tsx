@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "wouter";
 import SearchBar from "@/components/SearchBar";
 import SongCard from "@/components/SongCard";
+import ThemeToggle from "@/components/ThemeToggle";
 import EmptyState from "@/components/EmptyState";
 import { Music, Search as SearchIcon, ListMusic } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -181,7 +182,7 @@ export default function UserRequestPage() {
     <div className="min-h-screen bg-background flex flex-col">
       <div className="flex items-center justify-between p-4 border-b">
         <h1 className="text-2xl font-bold">Request a Song</h1>
-        {/* <ThemeToggle /> */}
+            <ThemeToggle />
       </div>
       <div className="flex flex-1 min-h-0">
         {/* Left: Search & Results */}
