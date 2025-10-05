@@ -154,17 +154,19 @@ export default function LandingPage() {
     <div className="min-h-screen bg-background">
       <header className="border-b p-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">SongRequest</h1>
-            <p className="text-muted-foreground">Manage song requests in real-time</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="text-right mr-4">
-              <p className="text-2xl font-bold text-primary" data-testid="text-queue-count">
-                {queue.length}
-              </p>
-              <p className="text-sm text-muted-foreground">in queue</p>
+            <a href="/" className="flex items-center gap-4">
+            <div>
+              <h1 className="text-3xl font-bold">SongRequest</h1>
+              <p className="text-muted-foreground">Manage song requests in real-time</p>
             </div>
+            </a>
+            <div className="flex items-center gap-2">
+              <div className="text-right mr-4">
+                <p className="text-2xl font-bold text-primary" data-testid="text-queue-count">
+                  {queue.length}
+                </p>
+                <p className="text-sm text-muted-foreground">in queue</p>
+              </div>
             <ThemeToggle />
           </div>
         </div>

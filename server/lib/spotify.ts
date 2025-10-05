@@ -41,7 +41,7 @@ async function getAppToken(): Promise<string> {
 
   return cachedToken.access_token;
 }
-// server/routes/spotify.ts
+
 import { Router, Request, Response } from "express";
 import { searchSpotify } from "../../client/src/lib/spotifyHelper.ts";
 const router = Router();
@@ -65,7 +65,6 @@ router.get("/search", async (req: Request, res: Response) => {
 
 export default router;
 
-// Public API: server-side search (client calls your route, not Spotify directly)
 export async function spotifySearch(q: string, type = "track") {
   const token = await getAppToken();
 
