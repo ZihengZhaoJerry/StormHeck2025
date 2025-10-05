@@ -5,6 +5,9 @@ import { createServer, Server } from "http";
 // Mount sub-routers
 import spotifyRouter from "./lib/spotify";
 
+// In-memory event queues (replace with DB in production)
+const eventQueues: Record<string, any[]> = {};
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Basic middleware (adjust as needed)
   app.use(express.json());
@@ -17,6 +20,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ---- Your API routes ----
   app.use("/api/spotify", spotifyRouter);
+
+  // Song queue endpoints
+  app.get("/api/song-queue", (req: Request, res: Response) => {
+    const eventId = req.query.eventId as string;
+    if (!eventId) return res.status(400).json({ error: "Missing eventId" });
+    res.json(eventQueues[eventId] || []);
+  });
+
+  app.post("/api/song-queue", (req: Request, res: Response) => {
+    const { eventId, session, songs } = req.body;
+    if (!eventId || !Array.isArray(songs)) {
+      return res.status(400).json({ error: "Missing eventId or songs" });
+    }
+    // Optionally deduplicate by song id
+    eventQueues[eventId] = eventQueues[eventId] || [];
+    const existingIds = new Set(eventQueues[eventId].map((s: any) => s.id));
+    const newSongs = songs.filter((s: any) => !existingIds.has(s.id));
+    eventQueues[eventId].push(...newSongs);
+    res.json({ success: true });
+  });
 
   // 404 for unknown API routes
   app.use("/api/*", (_req: Request, res: Response) => {
