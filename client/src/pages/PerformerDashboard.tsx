@@ -283,6 +283,7 @@ export default function LandingPage() {
                     artist={song.artist}
                     requestedBy={song.requestedBy}
                     isPlaying={false}
+                    albumArt={song.albumArt}
                   />
                 </div>
               ))
@@ -315,6 +316,7 @@ export default function LandingPage() {
                     artist={song.artist}
                     requestedBy={song.requestedBy}
                     isPlaying={nowPlaying?.id === song.id}
+                    albumArt={song.albumArt} 
                   />
                 </div>
               ))
