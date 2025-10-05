@@ -1,4 +1,4 @@
-import LandingPage from "../PerfoermerDashBoard";
+import LandingPage from "../PerformerDashboard";
 
 export default function LandingPageExample() {
   return <LandingPage />;

@@ -9,7 +9,7 @@ import UserRequestPage from "@/pages/UserRequestPage";
 import LoginPage from "@/pages/LoginPage";
 import QRCodePage from "@/pages/QRCodePage";
 import ProtectedRoute from "./components/ProtectedRoute";
-import PerformerDashboard from "@/pages/PerformerDashboard";
+// PerformerDashboard is not imported here because it's not used in this router file
 
 function Router() {
   return (
@@ -24,11 +24,6 @@ function Router() {
       )} />
       <Route path="/request" component={() => (
         <UserRequestPage />
-      )} />
-      <Route path="/performer" component={() => (
-        <ProtectedRoute>
-          <PerformerDashboard />
-        </ProtectedRoute>
       )} />
       <Route path="/qr-code" component={() => (
         <QRCodePage />

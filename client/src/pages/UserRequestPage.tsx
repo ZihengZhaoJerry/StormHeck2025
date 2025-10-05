@@ -154,7 +154,7 @@ export default function UserRequestPage() {
     setSubmitting(true);
     try {
       // Send only the song IDs, or send full song info as needed by your backend
-      const res = await fetch("/api/queue", {
+      const res = await fetch("/api/song-queue", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ eventId, session, songs: requestedSongObjs }),
