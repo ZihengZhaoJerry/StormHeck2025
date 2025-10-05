@@ -1,13 +1,13 @@
 // server/lib/spotify.ts
 import { Router, Request, Response } from "express";
-import { searchSpotify } from "../../client/src/lib/spotifyHelper.ts";
+import { randomUUID } from "crypto";
 
 const SPOTIFY_BASE_URL = "https://api.spotify.com/v1";
 
 // Default production host for redirects (use your deployed Render URL)
 const DEFAULT_APP_ORIGIN = "https://stormheck2025.onrender.com";
 const DEFAULT_REDIRECT_PATH = "/api/spotify/callback";
-const DEFAULT_REDIRECT_URI = `${process.env.SPOTIFY_REDIRECT_URI ?? DEFAULT_APP_ORIGIN + DEFAULT_REDIRECT_PATH}`;
+const DEFAULT_REDIRECT_URI = process.env.SPOTIFY_REDIRECT_URI ?? (DEFAULT_APP_ORIGIN + DEFAULT_REDIRECT_PATH);
 const DEFAULT_CLIENT_URL = process.env.CLIENT_URL ?? DEFAULT_APP_ORIGIN;
 
 // Simple in-memory storage for a single performer's user tokens (demo only).
@@ -23,7 +23,10 @@ let performerTokens: {
 // Multi-user token storage: map from your app user id -> tokens. Demo-only (in-memory).
 const userTokens = new Map<string, { access_token: string; refresh_token: string; expires_at: number; spotify_user_id?: string }>();
 
-const router = Router();
+// server-side OAuth state map to prevent trusting client-provided state payloads
+const oauthStates = new Map<string, { userId?: string | null; createdAt: number }>();
+
+// router is declared below once before routes
 
 // Search uses the server-side app token (client credentials)
 // We'll keep the existing server-side spotifySearch function (client credentials)
@@ -50,6 +53,8 @@ async function getAppToken(): Promise<string> {
   appTokenCache = { access_token: data.access_token, expires_at: Math.floor(Date.now() / 1000) + data.expires_in };
   return appTokenCache.access_token;
 }
+
+const router = Router();
 
 export async function spotifySearch(q: string, type = "track") {
   const token = await getAppToken();
@@ -93,11 +98,15 @@ router.get("/login", (req: Request, res: Response) => {
   // allow caller to pass a userId so we can associate the Spotify account with that user
   const { userId } = req.query as { userId?: string };
 
-  // Use state to help round-trip the userId (encoded JSON)
-  const rawState = JSON.stringify({ s: Math.random().toString(36).slice(2, 15), userId: userId ?? null });
-  const state = Buffer.from(rawState).toString("base64url");
+  // Generate a short opaque state id and store server-side to avoid trusting arbitrary client values
+  const stateId = randomUUID();
+  oauthStates.set(stateId, { userId: userId ?? null, createdAt: Date.now() });
+  const state = stateId;
 
-  const params = new URLSearchParams({ response_type: "code", client_id: clientId, scope: scopes, redirect_uri: redirectUri, state, show_dialog: "true" });
+  // Allow callers to opt into forcing the consent dialog via ?show_dialog=1. Default: no forced dialog.
+  const showDialog = (req.query.show_dialog as string | undefined) === "1" ? "true" : undefined;
+  const params = new URLSearchParams({ response_type: "code", client_id: clientId, scope: scopes, redirect_uri: redirectUri, state });
+  if (showDialog) params.set("show_dialog", showDialog);
   const url = `https://accounts.spotify.com/authorize?${params.toString()}`;
   console.log(`[spotify] redirecting to authorize URL; redirect_uri=${redirectUri}`);
   console.log(`[spotify] full authorize url: ${url}`);
@@ -119,18 +128,20 @@ router.get("/callback", async (req: Request, res: Response) => {
   try {
     const code = req.query.code as string;
     const error = req.query.error as string | undefined;
-    const redirectUri = (process.env.SPOTIFY_REDIRECT_URI || `${req.protocol}://${req.get("host")}/api/spotify/callback`).toString();
+    // Use the configured redirect URI (or the default for your deployed app)
+    const redirectUri = (process.env.SPOTIFY_REDIRECT_URI ?? DEFAULT_REDIRECT_URI).toString();
 
-    // parse state to retrieve optional userId
+    // parse stateId and retrieve optional userId from our server-side map
     const stateParam = req.query.state as string | undefined;
     let stateUserId: string | null = null;
     if (stateParam) {
-      try {
-        const decoded = Buffer.from(stateParam, "base64url").toString();
-        const obj = JSON.parse(decoded);
-        stateUserId = obj?.userId ?? null;
-      } catch {
-        stateUserId = null;
+      const stored = oauthStates.get(stateParam);
+      if (stored) {
+        stateUserId = stored.userId ?? null;
+        // one-time use
+        oauthStates.delete(stateParam);
+      } else {
+        console.warn("Spotify callback received unknown or expired state id", stateParam);
       }
     }
 
@@ -172,20 +183,24 @@ router.get("/callback", async (req: Request, res: Response) => {
     }
 
     // Fetch user's Spotify id and display name for logs and status
-    const meToken = tokenObj.access_token;
-    const me = await fetch("https://api.spotify.com/v1/me", { headers: { Authorization: `Bearer ${meToken}` } });
-    const meJson = await me.json();
-    if (me.ok) {
-      const idToSet = meJson.id;
-      if (stateUserId) {
-        const existing = userTokens.get(stateUserId)!;
-        existing.spotify_user_id = idToSet;
-        userTokens.set(stateUserId, existing);
-        console.log("Connected Spotify userId", stateUserId, "->", idToSet, meJson.display_name ?? "(no-name)");
-      } else if (performerTokens) {
-        performerTokens.spotify_user_id = idToSet;
-        console.log("Connected Spotify performer:", idToSet, meJson.display_name ?? "(no-name)");
+    try {
+      const meToken = tokenObj.access_token;
+      const me = await fetch("https://api.spotify.com/v1/me", { headers: { Authorization: `Bearer ${meToken}` } });
+      const meJson = await me.json();
+      if (me.ok) {
+        const idToSet = meJson.id;
+        if (stateUserId) {
+          const existing = userTokens.get(stateUserId)!;
+          existing.spotify_user_id = idToSet;
+          userTokens.set(stateUserId, existing);
+          console.log("Connected Spotify userId", stateUserId, "->", idToSet, meJson.display_name ?? "(no-name)");
+        } else if (performerTokens) {
+          performerTokens.spotify_user_id = idToSet;
+          console.log("Connected Spotify performer:", idToSet, meJson.display_name ?? "(no-name)");
+        }
       }
+    } catch (e) {
+      console.warn("Failed to fetch Spotify /me after token exchange:", e);
     }
 
     // Redirect to client (dev default 5173) and indicate success
@@ -219,7 +234,14 @@ async function refreshTokenIfNeededForTokenObj(tokenObj: { access_token: string;
   });
 
   const json = await resp.json();
-  if (!resp.ok) throw new Error(`Failed to refresh token: ${resp.status} ${JSON.stringify(json)}`);
+  if (!resp.ok) {
+    // If the refresh token is invalid (e.g. revoked), surface an actionable error
+    const errMsg = `Failed to refresh token: ${resp.status} ${JSON.stringify(json)}`;
+    const invalidGrant = json?.error === "invalid_grant" || (json?.error_description ?? "").toLowerCase().includes("invalid grant");
+    const err: any = new Error(errMsg);
+    err.invalidGrant = invalidGrant;
+    throw err;
+  }
 
   tokenObj.access_token = json.access_token;
   tokenObj.expires_at = Math.floor(Date.now() / 1000) + (json.expires_in || 3600);
@@ -243,7 +265,18 @@ router.post("/play", async (req: Request, res: Response) => {
       return res.status(401).json({ error: "No Spotify connection found. Connect via /api/spotify/login" });
     }
 
-    await refreshTokenIfNeededForTokenObj(tokenObj);
+    try {
+      await refreshTokenIfNeededForTokenObj(tokenObj);
+    } catch (err: any) {
+      console.error("Token refresh failed before play:", err?.message ?? err);
+      // If refresh reported an invalid grant, clear stored tokens and ask client to reconnect
+      if (err?.invalidGrant) {
+        if (userId) userTokens.delete(userId);
+        else performerTokens = null;
+        return res.status(401).json({ error: "Spotify session expired or revoked. Please reconnect." });
+      }
+      return res.status(500).json({ error: err?.message ?? String(err) });
+    }
 
     const playBody: any = {};
     if (uri) playBody.uris = [uri];
@@ -287,6 +320,20 @@ router.get("/status", async (req: Request, res: Response) => {
   // attempt to fetch display name if we didn't store it
   let display_name: string | undefined = undefined;
   try {
+    // try refreshing first so we return accurate status
+    try {
+      await refreshTokenIfNeededForTokenObj(tokenObj as any);
+    } catch (err: any) {
+      console.error("Token refresh failed during /status:", err?.message ?? err);
+      if (err?.invalidGrant) {
+        // clear stored tokens and report disconnected
+        if (userId) userTokens.delete(userId);
+        else performerTokens = null;
+        return res.status(200).json({ connected: false });
+      }
+      // continue to try /me even if refresh failed for other reasons
+    }
+
     const me = await fetch(`${SPOTIFY_BASE_URL}/me`, { headers: { Authorization: `Bearer ${tokenObj.access_token}` } });
     if (me.ok) {
       const j = await me.json();

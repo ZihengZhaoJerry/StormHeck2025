@@ -171,32 +171,59 @@ export default function LandingPage() {
     <div className="min-h-screen bg-background">
       <header className="border-b p-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold">SongRequest</h1>
-            <p className="text-muted-foreground">Manage song requests in real-time</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="text-right mr-4">
-              <p className="text-2xl font-bold text-primary" data-testid="text-queue-count">
-                {queue.length}
-              </p>
-              <p className="text-sm text-muted-foreground">in queue</p>
+            <a href="/" className="flex items-center gap-4">
+            <div>
+              <h1 className="text-3xl font-bold">SongRequest</h1>
+              <p className="text-muted-foreground">Manage song requests in real-time</p>
             </div>
-            {spotifyStatus?.connected ? (
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Connected as {spotifyStatus.display_name ?? spotifyStatus.display_name}</span>
-                <Button variant="outline" className="mr-2" onClick={async () => {
-                  try {
-                    await fetch('/api/spotify/disconnect', { method: 'POST' });
-                    setSpotifyStatus({ connected: false });
-                  } catch {}
-                }}>Disconnect</Button>
+            </a>
+            <div className="flex items-center gap-2">
+              <div className="text-right mr-4">
+                <p className="text-2xl font-bold text-primary" data-testid="text-queue-count">
+                  {queue.length}
+                </p>
+                <p className="text-sm text-muted-foreground">in queue</p>
               </div>
-            ) : (
-              <a href="/api/spotify/login">
-                <Button variant="ghost" className="mr-2">Connect Spotify</Button>
-              </a>
-            )}
+
+              {/* Spotify connect / disconnect UI */}
+              <div className="flex items-center gap-2 mr-2">
+                {spotifyStatus?.connected ? (
+                  <>
+                    <div className="text-sm text-muted-foreground">Connected: {spotifyStatus.display_name ?? "Spotify"}</div>
+                    <Button
+                      variant="outline"
+                      size={"sm" as any}
+                      onClick={async () => {
+                        try {
+                          const resp = await fetch(`/api/spotify/disconnect`, { method: "POST" });
+                          if (resp.ok) {
+                            setSpotifyStatus({ connected: false });
+                            toast({ title: "Spotify disconnected" });
+                          } else {
+                            const j = await resp.json().catch(() => ({}));
+                            toast({ title: "Disconnect failed", description: j?.error ?? "Unknown error", variant: "destructive" });
+                          }
+                        } catch (e: any) {
+                          toast({ title: "Disconnect failed", description: e?.message ?? String(e), variant: "destructive" });
+                        }
+                      }}
+                    >
+                      Disconnect
+                    </Button>
+                  </>
+                ) : (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      // redirect to server login which will forward to Spotify
+                      window.location.href = `/api/spotify/login`;
+                    }}
+                  >
+                    Connect Spotify
+                  </Button>
+                )}
+              </div>
+
             <ThemeToggle />
           </div>
         </div>
