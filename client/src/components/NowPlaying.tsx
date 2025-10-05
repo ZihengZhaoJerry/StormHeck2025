@@ -2,6 +2,8 @@ import { Music, Pause } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useEffect, useRef, useState } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
+import { app as firebaseApp } from "@/lib/firebaseConfig";
 
 interface NowPlayingProps {
   title: string;
@@ -38,6 +40,7 @@ export default function NowPlaying({ title, artist, albumArt, album, previewUrl,
 
   // Check connected status for performer Spotify account
   const [spotifyConnected, setSpotifyConnected] = useState<boolean | null>(null);
+  const [appUserId, setAppUserId] = useState<string | null>(null);
   useEffect(() => {
     (async () => {
       try {
@@ -49,6 +52,11 @@ export default function NowPlaying({ title, artist, albumArt, album, previewUrl,
         setSpotifyConnected(false);
       }
     })();
+  }, []);
+
+  useEffect(() => {
+    const unsub = onAuthStateChanged(getAuth(firebaseApp), (u) => setAppUserId(u?.uid ?? null));
+    return () => unsub();
   }, []);
 
   useEffect(() => {
@@ -132,30 +140,7 @@ export default function NowPlaying({ title, artist, albumArt, album, previewUrl,
               </button>
               {/* Play on performer's Spotify */}
               {spotifyConnected ? (
-                <button
-                  onClick={async () => {
-                    try {
-                      const body: any = {};
-                      if (spotifyUri) body.uri = spotifyUri;
-                      else return;
-                      const resp = await fetch(`/api/spotify/play`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
-                      if (resp.ok) {
-                        const { toast } = useToast();
-                        toast({ title: "Playing on Spotify", description: "Attempting to play on performer Spotify account" });
-                      } else {
-                        const json = await resp.json().catch(() => ({}));
-                        const { toast } = useToast();
-                        toast({ title: "Spotify play failed", description: json?.error ?? "Could not start playback", variant: "destructive" });
-                      }
-                    } catch (e: any) {
-                      const { toast } = useToast();
-                      toast({ title: "Spotify play error", description: e?.message ?? String(e), variant: "destructive" });
-                    }
-                  }}
-                  className="px-2 py-1 rounded bg-spotify text-white"
-                >
-                  Play on Spotify
-                </button>
+                <PlayButton spotifyUri={spotifyUri} appUserId={appUserId} />
               ) : (
                 <a href="/api/spotify/login" className="px-2 py-1 rounded bg-foreground/10 text-sm">Connect Spotify</a>
               )}
@@ -179,5 +164,33 @@ export default function NowPlaying({ title, artist, albumArt, album, previewUrl,
         )}
       </div>
     </Card>
+  );
+}
+
+function PlayButton({ spotifyUri, appUserId }: { spotifyUri?: string; appUserId?: string | null }) {
+  const { toast } = useToast();
+  return (
+    <button
+      onClick={async () => {
+        try {
+          const body: any = {};
+          if (spotifyUri) body.uri = spotifyUri;
+          else return;
+          if (appUserId) body.userId = appUserId;
+          const resp = await fetch(`/api/spotify/play`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+          if (resp.ok) {
+            toast({ title: "Playing on Spotify", description: "Attempting to play on performer Spotify account" });
+          } else {
+            const json = await resp.json().catch(() => ({}));
+            toast({ title: "Spotify play failed", description: json?.error ?? "Could not start playback", variant: "destructive" });
+          }
+        } catch (e: any) {
+          toast({ title: "Spotify play error", description: e?.message ?? String(e), variant: "destructive" });
+        }
+      }}
+      className="px-2 py-1 rounded bg-spotify text-white"
+    >
+      Play on Spotify
+    </button>
   );
 }
