@@ -34,6 +34,7 @@ function mapSpotifyTracksToQueue(data: any): UISong[] {
     albumArt: pickImage(t.album?.images ?? []),
     requestedBy: "", // You can fill this if you have user info
     previewUrl: t.preview_url, // <-- add this line
+    uri: t.uri, // spotify:track:<id>
   }));
 }
 
@@ -45,6 +46,7 @@ type UISong = {
   albumArt?: string;
   requestedBy?: string;
   previewUrl?: string; // <-- add this line
+  uri?: string;
 };
 
 const mockNowPlaying = {
@@ -65,6 +67,7 @@ export default function LandingPage() {
   const debounceMs = 350;
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [nowPlaying, setNowPlaying] = useState<UISong | null>(null);
+  const [spotifyStatus, setSpotifyStatus] = useState<{ connected: boolean; display_name?: string } | null>(null);
 
   useEffect(() => {
     if (timerRef.current) clearTimeout(timerRef.current);
@@ -96,6 +99,20 @@ export default function LandingPage() {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
   }, [searchQuery, toast]);
+
+  // fetch spotify connection status for header
+  useEffect(() => {
+    (async () => {
+      try {
+        const resp = await fetch(`/api/spotify/status`);
+        if (!resp.ok) return setSpotifyStatus({ connected: false });
+        const json = await resp.json();
+        setSpotifyStatus({ connected: Boolean(json?.connected), display_name: json?.display_name });
+      } catch {
+        setSpotifyStatus({ connected: false });
+      }
+    })();
+  }, []);
 
   const emptyState = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -165,6 +182,21 @@ export default function LandingPage() {
               </p>
               <p className="text-sm text-muted-foreground">in queue</p>
             </div>
+            {spotifyStatus?.connected ? (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Connected as {spotifyStatus.display_name ?? spotifyStatus.display_name}</span>
+                <Button variant="outline" className="mr-2" onClick={async () => {
+                  try {
+                    await fetch('/api/spotify/disconnect', { method: 'POST' });
+                    setSpotifyStatus({ connected: false });
+                  } catch {}
+                }}>Disconnect</Button>
+              </div>
+            ) : (
+              <a href="/api/spotify/login">
+                <Button variant="ghost" className="mr-2">Connect Spotify</Button>
+              </a>
+            )}
             <ThemeToggle />
           </div>
         </div>
@@ -266,6 +298,7 @@ export default function LandingPage() {
                   album={nowPlaying.album}
                   albumArt={nowPlaying.albumArt}
                   previewUrl={nowPlaying.previewUrl} // <-- pass previewUrl
+                  spotifyUri={nowPlaying.uri}
                 />
               ) : (
                 <EmptyState

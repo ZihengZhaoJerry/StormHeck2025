@@ -6,6 +6,7 @@ import QRCodeDisplay from "@/components/QRCodeDisplay";
 import EmptyState from "@/components/EmptyState";
 import { ListMusic } from "lucide-react";
 import ThemeToggle from "@/components/ThemeToggle";
+import { Button } from "@/components/ui/button";
 
 // todo: remove mock functionality
 const mockQueue = [
@@ -76,7 +77,12 @@ export default function PerformerDashboard() {
           
           <TabsContent value="now-playing">
             <div className="max-w-3xl mx-auto">
-              <NowPlaying {...mockNowPlaying} />
+              <div className="mb-4 text-right">
+                <a href="/api/spotify/login">
+                  <Button>Connect Spotify</Button>
+                </a>
+              </div>
+              <NowPlaying {...mockNowPlaying} spotifyUri={"spotify:track:4uLU6hMCjMI75M1A2tKUQC"} />
             </div>
           </TabsContent>
         </Tabs>

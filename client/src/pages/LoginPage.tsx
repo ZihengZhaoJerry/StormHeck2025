@@ -6,6 +6,7 @@ import { app } from "@/lib/firebaseConfig";
 import AuthForm from "@/components/AuthForm";  // Your form component
 import { Card } from "@/components/ui/card";
 import { Music, Users, Smartphone } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function LoginPage() {
   const [, setLocation] = useLocation();
@@ -77,6 +78,7 @@ export default function LoginPage() {
           <div className="mb-8 w-full">
             <AuthForm />
           </div>
+          {/* Connect Spotify moved to Landing Page header */}
         </div>
       </div>
     </div>

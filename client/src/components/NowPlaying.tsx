@@ -1,6 +1,7 @@
 import { Music, Pause } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { useEffect, useRef, useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 interface NowPlayingProps {
   title: string;
@@ -8,9 +9,10 @@ interface NowPlayingProps {
   albumArt?: string;
   album?: string;
   previewUrl?: string;
+  spotifyUri?: string; // spotify:track:<id>
 }
 
-export default function NowPlaying({ title, artist, albumArt, album, previewUrl }: NowPlayingProps) {
+export default function NowPlaying({ title, artist, albumArt, album, previewUrl, spotifyUri }: NowPlayingProps) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(true);
   const [currentTime, setCurrentTime] = useState(0);
@@ -23,7 +25,31 @@ export default function NowPlaying({ title, artist, albumArt, album, previewUrl 
       audioRef.current.currentTime = 0;
       audioRef.current.play();
     }
+    // Try to trigger playback on connected Spotify account (server-side) if we have a spotifyUri prop.
+    (async () => {
+      try {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        const spotifyUri = (arguments[0] && arguments[0].spotifyUri) || undefined;
+      } catch {}
+      // No-op here; actual play is triggered separately via explicit play button or by parent.
+    })();
   }, [previewUrl]);
+
+  // Check connected status for performer Spotify account
+  const [spotifyConnected, setSpotifyConnected] = useState<boolean | null>(null);
+  useEffect(() => {
+    (async () => {
+      try {
+        const resp = await fetch(`/api/spotify/status`);
+        if (!resp.ok) return setSpotifyConnected(false);
+        const json = await resp.json();
+        setSpotifyConnected(Boolean(json?.connected));
+      } catch {
+        setSpotifyConnected(false);
+      }
+    })();
+  }, []);
 
   useEffect(() => {
     if (!audioRef.current) return;
@@ -104,6 +130,35 @@ export default function NowPlaying({ title, artist, albumArt, album, previewUrl 
               >
                 {isPlaying ? "Pause" : "Play"}
               </button>
+              {/* Play on performer's Spotify */}
+              {spotifyConnected ? (
+                <button
+                  onClick={async () => {
+                    try {
+                      const body: any = {};
+                      if (spotifyUri) body.uri = spotifyUri;
+                      else return;
+                      const resp = await fetch(`/api/spotify/play`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+                      if (resp.ok) {
+                        const { toast } = useToast();
+                        toast({ title: "Playing on Spotify", description: "Attempting to play on performer Spotify account" });
+                      } else {
+                        const json = await resp.json().catch(() => ({}));
+                        const { toast } = useToast();
+                        toast({ title: "Spotify play failed", description: json?.error ?? "Could not start playback", variant: "destructive" });
+                      }
+                    } catch (e: any) {
+                      const { toast } = useToast();
+                      toast({ title: "Spotify play error", description: e?.message ?? String(e), variant: "destructive" });
+                    }
+                  }}
+                  className="px-2 py-1 rounded bg-spotify text-white"
+                >
+                  Play on Spotify
+                </button>
+              ) : (
+                <a href="/api/spotify/login" className="px-2 py-1 rounded bg-foreground/10 text-sm">Connect Spotify</a>
+              )}
               <span className="text-xs w-10 text-right">{formatTime(currentTime)}</span>
               <input
                 type="range"
