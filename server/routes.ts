@@ -1,40 +1,40 @@
-import type { Express, Request, Response } from "express";
-import { createServer, type Server } from "http";
-import { storage } from "./storage";
+// server/routes.ts
+import express, { Express, Request, Response, NextFunction } from "express";
+import { createServer, Server } from "http";
+
+// Mount sub-routers
+import spotifyRouter from "./lib/spotify";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Spotify token endpoint using fetch
-  app.post("/api/spotify/token", async (req: Request, res: Response) => {
-    try {
-      const clientId = process.env.SPOTIFY_CLIENT_ID;
-      const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
-      if (!clientId || !clientSecret) {
-        return res.status(500).json({ error: "Spotify credentials not set" });
-      }
-      const auth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
-      const params = new URLSearchParams();
-      params.append("grant_type", "client_credentials");
-      const response = await fetch("https://accounts.spotify.com/api/token", {
-        method: "POST",
-        headers: {
-          Authorization: `Basic ${auth}`,
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-        body: params.toString(),
-      });
-      const data = await response.json();
-      if (!response.ok) {
-        return res.status(500).json({ error: data.error_description || "Spotify token error" });
-      }
-      res.json(data);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
+  // Basic middleware (adjust as needed)
+  app.use(express.json());
+  app.use(express.urlencoded({ extended: true }));
+
+  // Health check
+  app.get("/api/health", (_req: Request, res: Response) => {
+    res.json({ ok: true });
   });
 
+  // ---- Your API routes ----
+  app.use("/api/spotify", spotifyRouter);
 
+  // 404 for unknown API routes
+  app.use("/api/*", (_req: Request, res: Response) => {
+    res.status(404).json({ error: "Not found" });
+  });
 
+  // Centralized error handler
+  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+    console.error(err);
+    const status = typeof err.status === "number" ? err.status : 500;
+    res.status(status).json({
+      error: err?.message ?? "Internal Server Error",
+    });
+  });
+
+  // Create and return the HTTP server
   const httpServer = createServer(app);
-
   return httpServer;
 }
+
+export default registerRoutes;
