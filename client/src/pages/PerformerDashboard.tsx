@@ -82,7 +82,7 @@ export default function PerformerDashboard() {
         </Tabs>
       </div>
 
-      <QRCodeDisplay url={requestUrl} position="corner" />
+      {/* <QRCodeDisplay url={requestUrl} position="corner" /> */}
     </div>
   );
 }
